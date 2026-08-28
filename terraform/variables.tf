@@ -27,3 +27,21 @@ variable "private_subnet_cidrs" {
   type        = list(string)
   default     = ["10.0.11.0/24", "10.0.12.0/24"]
 }
+
+variable "app_port" {
+  description = "Port the application listens on"
+  type        = number
+  default     = 3000
+}
+
+variable "db_name" {
+  description = "Name of the PostgreSQL database"
+  type        = string
+  default     = "appdb"
+}
+
+variable "db_instance_class" {
+  description = "RDS instance size"
+  type        = string
+  default     = "db.t4g.micro"
+}
