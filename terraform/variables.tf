@@ -46,6 +46,12 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "github_repo" {
+  description = "GitHub repository in owner/name format"
+  type        = string
+  default     = "Rohanraju2004/8byte-devops-assignment"
+}
+
 variable "db_instance_class" {
   description = "RDS instance size"
   type        = string

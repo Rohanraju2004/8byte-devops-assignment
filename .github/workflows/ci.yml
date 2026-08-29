@@ -1,0 +1,103 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPO: 654087447604.dkr.ecr.ap-south-1.amazonaws.com/8byte-devops-app
+
+jobs:
+  test:
+    name: Test and scan dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: app
+        run: npm test
+
+      - name: Audit dependencies
+        working-directory: app
+        run: npm audit --audit-level=high
+
+  build:
+    name: Build, scan and push image
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::654087447604:role/8byte-devops-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build image
+        working-directory: app
+        run: docker build -t $ECR_REPO:${{ github.sha }} -t $ECR_REPO:latest .
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ECR_REPO }}:${{ github.sha }}
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Push image
+        run: |
+          docker push $ECR_REPO:${{ github.sha }}
+          docker push $ECR_REPO:latest
+
+  deploy-staging:
+    name: Deploy to staging
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::654087447604:role/8byte-devops-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Restart container with new image
+        run: |
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=8byte-devops-app" \
+                      "Name=instance-state-name,Values=running" \
+            --query 'Reservations[0].Instances[0].InstanceId' --output text)
+          aws ssm send-command \
+            --instance-ids $INSTANCE_ID \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin '"$ECR_REPO"'","docker pull '"$ECR_REPO"':latest","docker stop app || true","docker rm app || true","systemctl restart cloud-final || true"]'
+
+  deploy-production:
+    name: Deploy to production
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Placeholder for production deploy
+        run: echo "Approved. Production deploy would run here."
