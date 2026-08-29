@@ -3,3 +3,5 @@
 *.tfstate.*
 *.tfvars
 .terraform.tfstate.lock.info
+node_modules/
+.env
