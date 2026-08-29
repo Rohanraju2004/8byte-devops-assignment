@@ -51,6 +51,11 @@ variable "github_repo" {
   type        = string
   default     = "Rohanraju2004/8byte-devops-assignment"
 }
+variable "alert_email" {
+  description = "Email address for CloudWatch alarm notifications"
+  type        = string
+  default     = "rohanraju84@gmail.com"
+}
 
 variable "db_instance_class" {
   description = "RDS instance size"
