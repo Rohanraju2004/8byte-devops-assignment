@@ -22,3 +22,13 @@ output "db_secret_arn" {
   description = "Secrets Manager ARN holding the RDS master password"
   value       = aws_db_instance.main.master_user_secret[0].secret_arn
 }
+
+output "alb_dns_name" {
+  description = "Public URL of the application"
+  value       = aws_lb.main.dns_name
+}
+
+output "ecr_repository_url" {
+  description = "ECR repository URL for pushing images"
+  value       = aws_ecr_repository.app.repository_url
+}

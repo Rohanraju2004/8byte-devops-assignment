@@ -13,7 +13,10 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgres://appuser:localdevpassword@db:5432/appdb
+      DB_HOST: db
+      DB_USER: appuser
+      DB_PASSWORD: localdevpassword
+      DB_NAME: appdb
     depends_on:
       - db
 
